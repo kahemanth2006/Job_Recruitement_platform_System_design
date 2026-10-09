@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job Recruitment Platform</title>
+<style>
+:root{--navy:#172554;--blue:#2563eb;--bg:#f4f7fb;--ink:#182230;--muted:#64748b;--line:#e2e8f0;--green:#15803d}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:linear-gradient(120deg,#172554,#2563eb);color:white;padding:26px max(20px,calc((100% - 1120px)/2))}
+header h1{margin:0 0 8px;font-size:27px}header p{margin:0;color:#dbeafe}
+main{max-width:1120px;margin:24px auto;padding:0 18px}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.metric,.panel,.job{background:white;border:1px solid var(--line);border-radius:14px;padding:17px;box-shadow:0 4px 14px #0f172a08}
+.metric span{display:block;color:var(--muted);font-size:13px}.metric strong{display:block;font-size:25px;margin-top:8px}
+.layout{display:grid;grid-template-columns:1.35fr .9fr;gap:18px}.panel h2{font-size:18px;margin:0 0 14px}
+.searchrow{display:flex;gap:8px;margin-bottom:14px}input,select{font:inherit;border:1px solid #cbd5e1;border-radius:9px;padding:10px;background:white;min-width:0;width:100%}
+button{border:0;border-radius:9px;padding:10px 14px;background:var(--blue);color:white;font-weight:700;cursor:pointer}button:hover{filter:brightness(.94)}button.secondary{background:#e2e8f0;color:#1e293b}button.danger{background:#b91c1c}
+.jobs{display:grid;gap:12px}.job h3{margin:0 0 5px;font-size:17px}.company{color:var(--muted);font-size:14px}.tags{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0}.tag{font-size:12px;background:#eff6ff;color:#1d4ed8;padding:5px 8px;border-radius:99px}.jobfoot{display:flex;justify-content:space-between;align-items:center;gap:10px}.jobfoot small{color:var(--muted)}
+.empty{color:var(--muted);padding:20px;text-align:center;border:1px dashed #cbd5e1;border-radius:10px}
+.formgrid{display:grid;gap:10px}.section{border-top:1px solid var(--line);padding-top:16px;margin-top:16px}.section h3{font-size:15px;margin:0 0 10px}
+.statusrow{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}.status{border-radius:99px;padding:5px 8px;font-size:12px;background:#dcfce7;color:#166534;white-space:nowrap}.status.Pending{background:#fef3c7;color:#92400e}.status.Rejected{background:#fee2e2;color:#991b1b}.status.Withdrawn{background:#e2e8f0;color:#334155}
+.log{font-family:Consolas,monospace;font-size:12px;background:#0f172a;color:#cbd5e1;padding:12px;border-radius:10px;min-height:82px;max-height:160px;overflow:auto;white-space:pre-wrap}
+.note{font-size:12px;line-height:1.5;color:var(--muted);margin-top:10px}
+.toast{position:fixed;right:20px;bottom:20px;background:#172554;color:white;padding:12px 16px;border-radius:10px;box-shadow:0 6px 25px #0002;display:none}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:24px}
+@media(max-width:800px){.metrics{grid-template-columns:repeat(2,1fr)}.layout{grid-template-columns:1fr}}@media(max-width:420px){.metrics{grid-template-columns:1fr 1fr}.jobfoot{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<header>
+  <h1>JobConnect</h1>
+  <p>Job Recruitment Platform · Candidate Portal & Recruiter Dashboard</p>
+</header>
+<main>
+  <section class="metrics">
+    <div class="metric"><span>Available Jobs</span><strong id="jobCount">4</strong></div>
+    <div class="metric"><span>My Applications</span><strong id="appCount">0</strong></div>
+    <div class="metric"><span>Shortlisted</span><strong id="shortCount">0</strong></div>
+    <div class="metric"><span>Notifications Sent</span><strong id="notifyCount">0</strong></div>
+  </section>
+  <div class="layout">
+    <section class="panel">
+      <h2>Find a Job</h2>
+      <div class="searchrow">
+        <input id="search" placeholder="Search title, company, or location..." aria-label="Search jobs">
+        <button onclick="renderJobs()">Search</button>
+      </div>
+      <div id="jobs" class="jobs"></div>
+      <p class="note">Demo: searching checks a simulated cache first; a cache miss reads the sample job data.</p>
+    </section>
+    <aside class="panel">
+      <h2>Candidate Profile</h2>
+      <div class="formgrid">
+        <input id="candidateName" placeholder="Your name" value="Demo Candidate">
+        <input id="candidateEmail" placeholder="Email address" type="email" value="candidate@example.com">
+        <input id="resume" placeholder="Resume file name" value="resume.pdf">
+      </div>
+      <div class="section">
+        <h3>My Applications</h3>
+        <div id="applications"><div class="empty">You have not applied for any jobs yet.</div></div>
+      </div>
+      <div class="section">
+        <h3>Recruiter Dashboard (Demo)</h3>
+        <label class="note" for="applicationSelect">Select application</label>
+        <select id="applicationSelect"><option value="">No applications yet</option></select>
+        <div class="searchrow" style="margin-top:9px">
+          <select id="newStatus" aria-label="New application status">
+            <option>Shortlisted</option><option>Interview</option><option>Rejected</option><option>Applied</option>
+          </select>
+          <button onclick="updateStatus()">Update</button>
+        </div>
+        <p class="note">Recruiter status updates generate a simulated notification event.</p>
+      </div>
+      <div class="section">
+        <h3>System Event Log</h3>
+        <div id="log" class="log">[System] JobConnect demo ready.</div>
+        <p class="note">Architecture concepts shown: REST-style actions, job/application data, cache, and message-queue notification flow. This standalone demo stores data only in this browser session.</p>
+      </div>
+    </aside>
+  </div>
+</main>
+<footer>Academic HLD demonstration · Sample data only · No real applications are submitted</footer>
+<div id="toast" class="toast"></div>
+<script>
+const jobsData = [
+ {id:101,title:"Java Developer",company:"TechNova",location:"Chennai",type:"Full-time",salary:"₹4–6 LPA",description:"Build and maintain Java applications."},
+ {id:102,title:"Frontend Developer",company:"PixelWorks",location:"Bengaluru",type:"Full-time",salary:"₹5–7 LPA",description:"Create responsive web interfaces."},
+ {id:103,title:"Data Analyst Intern",company:"Insight Labs",location:"Coimbatore",type:"Internship",salary:"₹15,000/month",description:"Analyze datasets and prepare reports."},
+ {id:104,title:"Machine Learning Engineer",company:"AI Horizon",location:"Remote",type:"Full-time",salary:"₹6–9 LPA",description:"Build and evaluate machine-learning models."}
+];
+let applications = [];
+let cache = {};
+let notifications = 0;
+let nextApplicationId = 501;
+const $ = id => document.getElementById(id);
+function log(message){
+ const box=$("log"), time=new Date().toLocaleTimeString();
+ box.textContent += `\n[${time}] ${message}`;
+ box.scrollTop=box.scrollHeight;
+}
+function toast(message){
+ const t=$("toast");t.textContent=message;t.style.display="block";
+ setTimeout(()=>t.style.display="none",2200);
+}
+function renderJobs(){
+ const keyword=$("search").value.trim().toLowerCase();
+ const key="jobs:"+keyword;
+ let results;
+ if(cache[key]){
+   results=cache[key]; log("Cache HIT (Redis concept): returned cached job results.");
+ }else{
+   results=jobsData.filter(j=>[j.title,j.company,j.location,j.description].join(" ").toLowerCase().includes(keyword));
+   cache[key]=results; log("Cache MISS: queried job data and cached the results.");
+ }
+ $("jobCount").textContent=jobsData.length;
+ $("jobs").innerHTML=results.length?results.map(j=>`
+  <article class="job">
+   <h3>${escapeHtml(j.title)}</h3><div class="company">${escapeHtml(j.company)} · ${escapeHtml(j.location)}</div>
+   <div class="tags"><span class="tag">${escapeHtml(j.type)}</span><span class="tag">${escapeHtml(j.salary)}</span></div>
+   <div style="font-size:14px;margin-bottom:13px">${escapeHtml(j.description)}</div>
+   <div class="jobfoot"><small>Job ID: ${j.id}</small><button onclick="applyJob(${j.id})">Apply Now</button></div>
+  </article>`).join(""):'<div class="empty">No jobs found. Try another keyword.</div>';
+}
+function applyJob(jobId){
+ const name=$("candidateName").value.trim(),email=$("candidateEmail").value.trim(),resume=$("resume").value.trim();
+ if(!name||!email||!resume){toast("Enter your name, email, and resume.");return;}
+ if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){toast("Enter a valid email address.");return;}
+ if(applications.some(a=>a.jobId===jobId&&a.email.toLowerCase()===email.toLowerCase())){toast("You have already applied for this job.");log("Duplicate application prevented.");return;}
+ const job=jobsData.find(j=>j.id===jobId);
+ const app={id:nextApplicationId++,jobId,title:job.title,company:job.company,name,email,resume,status:"Applied"};
+ applications.push(app);
+ log(`POST /api/jobs/${jobId}/applications → application ${app.id} saved.`);
+ log(`Message queue event: ApplicationSubmitted(${app.id}) → Notification Service.`);
+ notifications++;renderApplications();renderMetrics();toast("Application submitted successfully!");
+}
+function renderApplications(){
+ const box=$("applications");
+ box.innerHTML=applications.length?applications.map(a=>`
+  <div class="statusrow"><div><strong>${escapeHtml(a.title)}</strong><br><span class="company">#${a.id} · ${escapeHtml(a.company)}</span><br>
+  <button class="secondary" style="margin-top:7px;padding:6px 9px;font-size:12px" onclick="withdraw(${a.id})">Withdraw</button></div>
+  <span class="status ${a.status}">${escapeHtml(a.status)}</span></div>`).join(""):'<div class="empty">You have not applied for any jobs yet.</div>';
+ const select=$("applicationSelect");
+ select.innerHTML=applications.length?applications.map(a=>`<option value="${a.id}">#${a.id} - ${escapeHtml(a.title)}</option>`).join(""):'<option value="">No applications yet</option>';
+}
+function updateStatus(){
+ const id=Number($("applicationSelect").value), status=$("newStatus").value;
+ const app=applications.find(a=>a.id===id);
+ if(!app){toast("Apply for a job first.");return;}
+ app.status=status;
+ log(`PATCH /api/applications/${id}/status → ${status}.`);
+ log(`Message queue event: ApplicationStatusUpdated(${id}) → Notification Service.`);
+ notifications++;renderApplications();renderMetrics();toast("Application status updated.");
+}
+function withdraw(id){
+ const app=applications.find(a=>a.id===id);if(!app)return;
+ app.status="Withdrawn";
+ log(`DELETE /api/applications/${id} → application withdrawn.`);
+ renderApplications();renderMetrics();toast("Application withdrawn.");
+}
+function renderMetrics(){
+ $("appCount").textContent=applications.length;
+ $("shortCount").textContent=applications.filter(a=>a.status==="Shortlisted").length;
+ $("notifyCount").textContent=notifications;
+}
+function escapeHtml(value){
+ return String(value).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+$("search").addEventListener("keydown",e=>{if(e.key==="Enter")renderJobs();});
+renderJobs();renderApplications();renderMetrics();
+</script>
+</body>
+</html>
